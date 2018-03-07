@@ -1,34 +1,29 @@
-import React, { Component } from "react";
-import PropTypes from "prop-types";
+import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 
-import IPFS from "ipfs";
-import { Buffer } from "buffer";
-import streamBuffers from "stream-buffers";
+import IPFS from 'ipfs';
+import { Buffer } from 'buffer';
+import streamBuffers from 'stream-buffers';
 
 export default class FileUploadInput extends Component {
   static propTypes = {
-    readAs: PropTypes.oneOf([
-      "readAsDataURL",
-      "readAsArrayBuffer",
-      "readAsBinaryString",
-      "readAsText"
-    ]),
+    readAs: PropTypes.oneOf(['readAsDataURL', 'readAsArrayBuffer', 'readAsBinaryString', 'readAsText']),
     onReadSuccess: PropTypes.func.isRequired,
     onReadFailure: PropTypes.func.isRequired,
     allowMultiple: PropTypes.bool,
     validateFiles: PropTypes.func,
     initialText: PropTypes.string,
     inputProps: PropTypes.object,
-    fileInputProps: PropTypes.object
+    fileInputProps: PropTypes.object,
   };
 
   static defaultProps = {
-    readAs: "readAsArrayBuffer",
+    readAs: 'readAsArrayBuffer',
     allowMultiple: false,
     validateFiles: files => null,
-    initialText: "",
+    initialText: '',
     inputProps: {},
-    fileInputProps: {}
+    fileInputProps: {},
   };
 
   node: any;
@@ -40,16 +35,11 @@ export default class FileUploadInput extends Component {
     this.state = { text: props.initialText, files: [] };
 
     // 用随机的仓库地址（IPFS 在本地缓存数据的地方）来初始化 IPFS 节点
-    const repoPath = "ipfs-" + Math.random();
+    const repoPath = 'ipfs-' + Math.random();
     this.node = new IPFS({ repo: repoPath });
 
     // 节点完成初始化并开始连接其他节点后会触发 ready 事件
-    this.node.on("ready", () =>
-      console.log(
-        "Online status: ",
-        this.node.isOnline() ? "online" : "offline"
-      )
-    );
+    this.node.on('ready', () => console.log('Online status: ', this.node.isOnline() ? 'online' : 'offline'));
   }
 
   /** 3.把文件丢进 IPFS 里 */
@@ -59,10 +49,10 @@ export default class FileUploadInput extends Component {
       this.progress = 0;
       // 创建用于修改进度条进度的流
       const myReadableStreamBuffer = new streamBuffers.ReadableStreamBuffer({
-        chunkSize: 25000 // 决定了传输速率
+        chunkSize: 25000, // 决定了传输速率
       });
       // 修改进度条进度
-      myReadableStreamBuffer.on("data", (chunk: Buffer) => {
+      myReadableStreamBuffer.on('data', (chunk: Buffer) => {
         this.progress += chunk.byteLength;
         myReadableStreamBuffer.resume();
       });
@@ -70,14 +60,14 @@ export default class FileUploadInput extends Component {
       // 创建 IPFS 读写文件的流，这是一个 Duplex 流，可读可写
       this.stream = this.node.files.addReadableStream();
       // 文件上传完毕后 resolve 这个 Promise
-      this.stream.on("data", (file: Buffer) => resolve(file));
+      this.stream.on('data', (file: Buffer) => resolve(file));
 
       // 对接好两个流，并开始上传
       this.stream.write(myReadableStreamBuffer);
       myReadableStreamBuffer.put(Buffer.from(fileArrayBuffer));
 
       // 上传完毕后关闭流
-      myReadableStreamBuffer.on("end", this.stream.end);
+      myReadableStreamBuffer.on('end', () => this.stream.end());
       myReadableStreamBuffer.stop();
     });
   };
@@ -86,8 +76,7 @@ export default class FileUploadInput extends Component {
   readFile(file) {
     return new Promise((resolve, reject) => {
       const fileReader = new FileReader();
-      fileReader.onload = event =>
-        resolve(this.uploadIPFS(event.target.result));
+      fileReader.onload = event => resolve(this.uploadIPFS(event.target.result));
       fileReader.onerror = reject;
       fileReader[this.props.readAs](file);
     });
@@ -95,7 +84,7 @@ export default class FileUploadInput extends Component {
 
   /** 清空显示的文本和暂存在 <input/> 里的文件 */
   resetState() {
-    this.setState({ text: "", files: [] });
+    this.setState({ text: '', files: [] });
   }
 
   /** 1.从 <input/> 元素获取文件 */
@@ -117,9 +106,7 @@ export default class FileUploadInput extends Component {
 
     // 调用上传文件的函数
     try {
-      const response = await Promise.all([
-        ...files.map(aFile => this.readFile(aFile))
-      ]);
+      const response = await Promise.all([...files.map(aFile => this.readFile(aFile))]);
       this.props.onReadSuccess(response);
     } catch (err) {
       this.resetState();
@@ -132,9 +119,7 @@ export default class FileUploadInput extends Component {
       <span className={this.props.className}>
         {/* 用于显示文件名的 input */}
         <input
-          placeholder={
-            this.props.allowMultiple ? "Select files" : "Select a file"
-          }
+          placeholder={this.props.allowMultiple ? 'Select files' : 'Select a file'}
           value={this.state.text}
           readOnly
           onClick={() => this.fileInput.click()}
@@ -142,7 +127,7 @@ export default class FileUploadInput extends Component {
         />
         {/* 用于放置文件对象的 input，因为样式比较丑，不让它显示 */}
         <input
-          style={{ display: "none" }}
+          style={{ display: 'none' }}
           ref={el => (this.fileInput = el)}
           type="file"
           multiple={this.props.allowMultiple}
