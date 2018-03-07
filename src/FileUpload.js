@@ -1,9 +1,19 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import styled from 'styled-components';
 
 import IPFS from 'ipfs';
 import { Buffer } from 'buffer';
 import streamBuffers from 'stream-buffers';
+
+const ProgressBar = styled.div`
+  width: ${props => ((props.progress || 0) / props.total * 130).toFixed(1)}px;
+  height: 20px;
+  background-color: #66ccff;
+  position: absolute;
+  left: 9px;
+  top: 10px;
+`;
 
 export default class FileUploadInput extends Component {
   static propTypes = {
@@ -27,8 +37,12 @@ export default class FileUploadInput extends Component {
   };
 
   node: any;
-  progress: number;
   stream: any;
+
+  state = {
+    progress: 0,
+    totalFileSize: 0,
+  };
 
   constructor(props) {
     super(props);
@@ -46,14 +60,14 @@ export default class FileUploadInput extends Component {
   uploadIPFS = (fileArrayBuffer: ArrayBuffer): Promise<Buffer> => {
     return new Promise((resolve, reject) => {
       // 先设置进度条到 0 的位置
-      this.progress = 0;
+      this.setState({ progress: 0 });
       // 创建用于修改进度条进度的流
       const myReadableStreamBuffer = new streamBuffers.ReadableStreamBuffer({
         chunkSize: 25000, // 决定了传输速率
       });
       // 修改进度条进度
       myReadableStreamBuffer.on('data', (chunk: Buffer) => {
-        this.progress += chunk.byteLength;
+        this.setState({ progress: this.state.progress + chunk.byteLength });
         myReadableStreamBuffer.resume();
       });
 
@@ -104,6 +118,12 @@ export default class FileUploadInput extends Component {
     const text = files.length > 1 ? `${files.length} files...` : files[0].name;
     this.setState({ text, files });
 
+    // 先计算文件的总大小，用于进度条
+    let totalFileSize = 0;
+    files.forEach(file => {
+      totalFileSize += file.size;
+    });
+    this.setState({ totalFileSize });
     // 调用上传文件的函数
     try {
       const response = await Promise.all([...files.map(aFile => this.readFile(aFile))]);
@@ -134,6 +154,7 @@ export default class FileUploadInput extends Component {
           onChange={e => this.handleChange(e)}
           {...this.props.fileInputProps}
         />
+        <ProgressBar progress={this.state.progress} total={this.state.totalFileSize} />
       </span>
     );
   }
